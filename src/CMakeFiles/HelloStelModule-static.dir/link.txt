@@ -1,0 +1,2 @@
+/usr/bin/ar cr libHelloStelModule.a  CMakeFiles/HelloStelModule-static.dir/HelloStelModule.cpp.o CMakeFiles/HelloStelModule-static.dir/moc_HelloStelModule.cxx.o
+/usr/bin/ranlib libHelloStelModule.a

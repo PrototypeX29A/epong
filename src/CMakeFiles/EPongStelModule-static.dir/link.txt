@@ -1,0 +1,2 @@
+/usr/bin/ar cr libEPongStelModule.a  CMakeFiles/EPongStelModule-static.dir/EPongStelModule.cpp.o CMakeFiles/EPongStelModule-static.dir/moc_EPongStelModule.cxx.o
+/usr/bin/ranlib libEPongStelModule.a
