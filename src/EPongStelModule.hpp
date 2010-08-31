@@ -16,8 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef HELLOSTELMODULE_HPP_
-#define HELLOSTELMODULE_HPP_
+#ifndef EPONGSTELMODULE_HPP_
+#define EPONGSTELMODULE_HPP_
 
 #include "StelModule.hpp"
 #include <QFont>
@@ -55,4 +55,4 @@ public:
 	virtual StelPluginInfo getPluginInfo() const;
 };
 
-#endif /*HELLOSTELMODULE_HPP_*/
+#endif /*EPONGSTELMODULE_HPP_*/
