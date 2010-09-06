@@ -21,6 +21,7 @@
 
 #include "StelModule.hpp"
 #include <QFont>
+#include "VecMath.hpp"
 
 //! This is an example of a plug-in which can be dynamically loaded into stellarium
 class EPongStelModule : public StelModule
@@ -40,7 +41,6 @@ private:
 	QFont font;
 };
 
-
 #include "fixx11h.h"
 #include <QObject>
 #include "StelPluginInterface.hpp"
@@ -55,4 +55,23 @@ public:
 	virtual StelPluginInfo getPluginInfo() const;
 };
 
+class PongBall 
+{
+public:
+	void move(double alpha);
+	void create();
+	Vec3f pos;
+	Vec3f normal;
+	char event;
+	//double event_time;
+	bool alive;
+	double moved;
+};
+
+class PongEvent
+{
+public:
+	float time;
+	char type;
+};
 #endif /*HELLOSTELMODULE_HPP_*/

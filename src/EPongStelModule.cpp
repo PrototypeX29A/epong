@@ -17,6 +17,7 @@
  */
 
 #include "StelProjector.hpp"
+#include "StelNavigator.hpp"
 #include "StelPainter.hpp"
 #include "StelApp.hpp"
 #include "StelCore.hpp"
@@ -25,21 +26,25 @@
 #include "EPongStelModule.hpp"
 
 #include <QDebug>
-#define BALLS 100 // better divisble by 4
+#define BALLS 100 
+// better divisble by 4
 
-Vec3f ballPos[BALLS];
-Vec3f ballNormal[BALLS];
-char ballEvent[BALLS];
-double eventTime[BALLS];
+//Vec3f ballPos[BALLS];
+//Vec3f ballNormal[BALLS];
+//char ballEvent[BALLS];
+//double eventTime[BALLS];
+
+PongBall *ball[BALLS];
+PongEvent *pevent[BALLS];
 
 static double lastTime; 
 enum {
 	BALL_CREATE,
-	BALL_BOUNCE,
-	BALL_PADDLE
+	BALL_COLLIDE,
+	BALL_BOUNCE
 };
 #define PI 3.14
-#define HTT 5 
+#define HTT 4.0 
 // Time in seconds a ball needs to make a halfturn
 
 /*************************************************************************
@@ -99,23 +104,31 @@ void EPongStelModule::init()
 {
 	qDebug() << "init called for EPongStelModule";
 	//time = 0;
+	lastTime = StelApp::getTotalRunTime(); 
 	int i;
 	for(i = 0; i < BALLS; i++)
 	{
-		ballEvent[0] = BALL_CREATE;	
-		ballPos[i].set(0.0f, 0.0f, 1.0f);
-		ballNormal[i].set(sin(2.0f * PI * i/BALLS), 
+		ball[i] = new PongBall();
+		ball[i]->pos.set(0.0f, 0.0f, 1.0f);
+		ball[i]->normal.set(sin(2.0f * PI * i/BALLS), 
 			cos(2.0f * PI * i / BALLS), 0.0f);
+		ball[i]->alive = 0;	
+		pevent[i] = new PongEvent();
+		pevent[i]->type = BALL_CREATE;
+		pevent[i]->time = lastTime + HTT * (i % (BALLS / 4)) /
+					(BALLS / 4);
+		printf("HTT: %f,  i:%d\n", HTT, i); 
+		printf("Ball creation of Ball %i at %f\n", i, pevent[i]->time);
 	}
 }
 
-inline void rotate(Vec3f &pos, Vec3f &normal, float alpha)
+inline void PongBall::move(double alpha)
 {
-	float x,y,z;
-	float s,c,t;
+	double x,y,z;
+	double s,c,t;
 	s = sin(alpha);
 	c = cos(alpha);
-	printf("s = %f, c = %f\n", s,c);	
+	//printf("s = %f, c = %f\n", s,c);	
 	t = 1.0f - c;
 	x = pos[0] * (t * normal[0] * normal[0] + c) +
 		pos[1] * (t * normal[0] * normal[1] - s * normal[2]) +
@@ -127,14 +140,77 @@ inline void rotate(Vec3f &pos, Vec3f &normal, float alpha)
 		pos[1] * (t * normal[1] * normal[2] + s * normal[0]) +
 		pos[2] * (t * normal[2] * normal[2] + c);
 	pos.set(x,y,z);
-	printf("x = %f, y = %f, z = %f\n",pos[0], pos[1], pos[2]); 
+	//printf("x = %f, y = %f, z = %f\n",pos[0], pos[1], pos[2]); 
+}
+
+double get_bounce_time(PongBall *ball)
+{
+	printf("px: %f, py: %f, pz: %f, nx: %f, ny: %f, nz: %f/n",
+		ball->pos[0], 
+		ball->pos[1], 
+		ball->pos[2], 
+		ball->normal[0], 
+		ball->normal[1], 
+		ball->normal[2]); 
+	return HTT * acos(ball->normal[1] * ball->pos[0] - 
+		ball->normal[0] * ball->pos[1]) / PI;
+}
+
+void get_next_event(PongEvent *event, PongBall *ball, double now)
+{
+	event->type = BALL_BOUNCE;
+	double delta = get_bounce_time(ball);
+	event->time = now + delta;
+	printf("Setting bounce time to %f\n",delta);
+}
+void handle_events(double time)
+{
+	//printf("enter handle\n");
+	int first;
+	double first_time;
+	do {
+		first = BALLS;
+		int i;
+		for (i = 0; i < BALLS; i++) {
+			if (pevent[i]->time < time) {
+				if ((first == BALLS) || 
+					((pevent[i]->time) < first_time)) {
+					first = i;
+					first_time = pevent[i]->time;
+				}
+			}
+		}
+		if (first < BALLS) {
+			printf("Time: %f\n", first_time);
+			switch (pevent[first]->type) {
+			case BALL_CREATE:
+				printf("\tCreate ball\n");
+				ball[first]->alive = 1;
+				ball[first]->moved = first_time;
+				break;
+			case BALL_BOUNCE:
+				printf("\tBounce ball\n");
+				ball[first]->normal[0] = 
+					- ball[first]->normal[0];
+				ball[first]->normal[1] = 
+					- ball[first]->normal[1];
+				ball[first]->moved = first_time;
+				break;
+			default:
+				break;
+			}
+			get_next_event(pevent[first], ball[first], first_time);
+		}
+	} while (first != BALLS);
+	//printf("leave handle\n");
 }
 
 /*************************************************************************
- Draw our module. This should print "EPong world!" in the main window
 *************************************************************************/
 void EPongStelModule::draw(StelCore* core)
 {
+	double currentTime = StelApp::getTotalRunTime();
+	handle_events(currentTime);
 	Vec3f xy;
 	StelProjectorP prj = core->getProjection(StelCore::FrameAltAz);
 	StelPainter painter(prj);
@@ -142,9 +218,15 @@ void EPongStelModule::draw(StelCore* core)
 	painter.setFont(font);
 	int i;
 	for (i = 0; i<BALLS; i++) {
-		if (ballEvent[i] != BALL_CREATE) rotate(ballPos[i], ballNormal[i], 0.05f);	
-		prj->project(ballPos[i], xy);
+		if (ball[i]->alive == 1) {
+			ball[i]->move((currentTime - ball[i]->moved)/HTT * PI);	
+			ball[i]->moved = currentTime;
+		}
+		prj->project(ball[i]->pos, xy);
 		painter.drawCircle(xy[0], xy[1], 10); //qDebug() << "end of drawing epong";
+		ball[i]->pos.normalize();
+		ball[i]->normal.normalize();
 	}
+	lastTime = currentTime;
 }
 
