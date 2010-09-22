@@ -43,9 +43,9 @@ enum {
 	BALL_COLLIDE,
 	BALL_BOUNCE
 };
-#define PI 3.14
+#define PI 3.1415927 
 #define HTT 4.0 
-// Time in seconds a ball needs to make a halfturn
+// Time in seconds a ball needs to travel 180 degrees 
 
 /*************************************************************************
  This method is the one called automatically by the StelModuleMgr just 
@@ -143,26 +143,61 @@ inline void PongBall::move(double alpha)
 	//printf("x = %f, y = %f, z = %f\n",pos[0], pos[1], pos[2]); 
 }
 
+void PongBall::handle_event(PongEvent *event, double time)
+{
+	printf("Time: %f\n", time);
+	if (this->alive) this->move((time - this->moved)/HTT * PI);	
+	switch (event->type) {
+	case BALL_CREATE:
+		printf("\tCreate ball\n");
+		this->alive = 1;
+		this->moved = time;
+		break;
+	case BALL_BOUNCE:
+		printf("\tBounce ball\n");
+		this->normal[0] = 
+			- this->normal[0];
+		this->normal[1] = 
+			- this->normal[1];
+		this->moved = time;
+		break;
+	default:
+		break;
+	}
+	this->get_next_event(event, time);
+}
+
+double arccos(double x)
+{
+	if (x > 1.0) return 0.0;
+	if (x < -1.0) return PI;
+	return acos(x);
+}
+
 double get_bounce_time(PongBall *ball)
 {
-	printf("px: %f, py: %f, pz: %f, nx: %f, ny: %f, nz: %f/n",
+	printf("px: %f, py: %f, pz: %f, nx: %f, ny: %f, nz: %f\n",
 		ball->pos[0], 
 		ball->pos[1], 
 		ball->pos[2], 
 		ball->normal[0], 
 		ball->normal[1], 
 		ball->normal[2]); 
-	return HTT * acos(ball->normal[1] * ball->pos[0] - 
+	printf("foo: %f, arccos(-1.0): %f\n", (ball->normal[1] * ball->pos[0] - 
+		ball->normal[0] * ball->pos[1]), arccos(-1.0));
+	/* 		cos (alpha) = n * p 		*/ 
+	return HTT * arccos(ball->normal[1] * ball->pos[0] - 
 		ball->normal[0] * ball->pos[1]) / PI;
 }
 
-void get_next_event(PongEvent *event, PongBall *ball, double now)
+void PongBall::get_next_event(PongEvent *event, double now)
 {
 	event->type = BALL_BOUNCE;
-	double delta = get_bounce_time(ball);
+	double delta = get_bounce_time(this);
 	event->time = now + delta;
 	printf("Setting bounce time to %f\n",delta);
 }
+
 void handle_events(double time)
 {
 	//printf("enter handle\n");
@@ -181,7 +216,8 @@ void handle_events(double time)
 			}
 		}
 		if (first < BALLS) {
-			printf("Time: %f\n", first_time);
+			ball[first]->handle_event(pevent[first], first_time);
+		/*	printf("Time: %f\n", first_time);
 			switch (pevent[first]->type) {
 			case BALL_CREATE:
 				printf("\tCreate ball\n");
@@ -190,6 +226,7 @@ void handle_events(double time)
 				break;
 			case BALL_BOUNCE:
 				printf("\tBounce ball\n");
+			//	ball->advance_to(first_time);
 				ball[first]->normal[0] = 
 					- ball[first]->normal[0];
 				ball[first]->normal[1] = 
@@ -200,7 +237,7 @@ void handle_events(double time)
 				break;
 			}
 			get_next_event(pevent[first], ball[first], first_time);
-		}
+	*/	}
 	} while (first != BALLS);
 	//printf("leave handle\n");
 }

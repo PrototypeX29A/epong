@@ -39,6 +39,7 @@ public:
 private:
 	// Font used for displaying our text
 	QFont font;
+		
 };
 
 #include "fixx11h.h"
@@ -55,6 +56,13 @@ public:
 	virtual StelPluginInfo getPluginInfo() const;
 };
 
+class PongEvent
+{
+public:
+	float time;
+	char type;
+};
+
 class PongBall 
 {
 public:
@@ -66,12 +74,9 @@ public:
 	//double event_time;
 	bool alive;
 	double moved;
+	void handle_event(PongEvent*, double);
+private:
+	void get_next_event(PongEvent*, double);
 };
 
-class PongEvent
-{
-public:
-	float time;
-	char type;
-};
 #endif /*EPONGSTELMODULE_HPP_*/
